@@ -10,7 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 
 logging.basicConfig(level=logging.INFO)
 
-# ТВОЙ НОВЫЙ ЧИСТЫЙ ТОКЕН ВШИТ НАМЕРТВО!
+# Твой чистый токен зашит железно!
 bot = Bot(
     token="8825080659:AAHVvg-j49r87Paa7w7gDl4wtZBnvZAkpEM",
     default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
@@ -75,7 +75,7 @@ def get_lesenka_kb(g):
         kb.append([InlineKeyboardButton(text="💰 Забрать выигрыш", callback_data=f"lcash_{g['id']}")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
-# Железобетонный обход любых текстовых блокировок хостинга!
+# Перехватчик сообщений с твоим вшитым личным ID владельца!
 @dp.message()
 async def handle_all_messages(m: types.Message):
     uid = str(m.from_user.id)

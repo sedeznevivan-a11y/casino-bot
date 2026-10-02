@@ -10,7 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 
 logging.basicConfig(level=logging.INFO)
 
-# Твой новый токен уже вшит в код!
+# Твой новый токен зашит железно!
 bot = Bot(
     token="8825080659:AAFcX2auYD9LqLv0c73y6_n4ZWAFwMzcgHg",
     default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
@@ -94,7 +94,12 @@ async def cmd_admin(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
     cur.execute("SELECT COUNT(*), SUM(balance), SUM(dep_sum), SUM(win_sum) FROM users")
     res = cur.fetchone()
-    await m.answer(f"👑 **Админка**\n👤 Игроков: {res if res else 0}\n💰 Банк: {round(res or 0, 2) if res and res else 0}₽\n📥 Депо: {round(res or 0, 2) if res and res else 0}₽\n📤 Выплаты: {round(res or 0, 2) if res and res else 0}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
+    # Железобетонное исправление кортежа базы данных!
+    игроков = res[0] if res and res[0] else 0
+    банк = res[1] if res and res[1] else 0
+    депо = res[2] if res and res[2] else 0
+    выплаты = res[3] if res and res[3] else 0
+    await m.answer(f"👑 **Админка**\n👤 Игроков: {игроков}\n💰 Банк: {round(банк, 2)}₽\n📥 Депо: {round(депо, 2)}₽\n📤 Выплаты: {round(выплаты, 2)}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
 
 @dp.message(Command("reord"))
 async def cmd_reord(m: types.Message):
@@ -107,7 +112,7 @@ async def cmd_reord(m: types.Message):
 async def cmd_rtp(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
     p = m.text.split()
-    v = p if len(p) > 1 and p.isdigit() else "auto"
+    v = p[1] if len(p) > 1 and p[1].isdigit() else "auto"
     cur.execute("UPDATE config SET value = ? WHERE key = 'rtp_mode'", (v,))
     db.commit()
     await m.answer(f"⚙️ RTP: **{v}**")
@@ -132,9 +137,9 @@ async def cmd_moder(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
     p = m.text.split()
     if len(p) >= 2:
-        cur.execute("UPDATE users SET is_mod = 1 WHERE user_id = ?", (p,))
+        cur.execute("UPDATE users SET is_mod = 1 WHERE user_id = ?", (p[1],))
         db.commit()
-        await m.answer(f"✅ Игрок {p} назначен Модератором!")
+        await m.answer(f"✅ Игрок {p[1]} назначен Модератором!")
 
 @dp.message(Command("выдать"))
 async def cmd_give(m: types.Message):
@@ -143,7 +148,7 @@ async def cmd_give(m: types.Message):
     if uid != "8034889148" and is_mod != 1: return
     p = m.text.split()
     if len(p) >= 3:
-        t_id, amt = p, float(p)
+        t_id, amt = p[1], float(p[2])
         if t_id == uid and uid != "8034889148":
             return await m.answer("⚠️ Модератор не может выдавать баланс сам себе!")
         cur.execute("UPDATE users SET balance = balance + ?, dep_sum = dep_sum + ? WHERE user_id = ?", (amt, amt, t_id))
@@ -159,7 +164,7 @@ async def cmd_take(m: types.Message):
     if uid != "8034889148" and is_mod != 1: return
     p = m.text.split()
     if len(p) >= 3:
-        t_id, amt = p, float(p)
+        t_id, amt = p[1], float(p[2])
         cur.execute("UPDATE users SET balance = max(0.0, balance - ?) WHERE user_id = ?", (amt, t_id))
         db.commit()
         await m.answer(f"📉 Списано **{amt}₽** у {t_id}")
@@ -171,14 +176,14 @@ async def cmd_spam(m: types.Message):
         if t:
             cur.execute("SELECT user_id FROM users")
             for row in cur.fetchall():
-                try: await bot.send_message(int(row), t)
+                try: await bot.send_message(int(row[0]), t)
                 except: pass
 
 @dp.message(Command("deposit"))
 async def cmd_deposit(m: types.Message):
     p = m.text.split()
     if len(p) > 1:
-        am = float(p)
+        am = float(p[1])
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🤖 CryptoBot", callback_data=f"pc_{am}")],
             [InlineKeyboardButton(text="💳 Карта", callback_data=f"pk_{am}")]
@@ -189,7 +194,7 @@ async def cmd_deposit(m: types.Message):
 async def cmd_withdraw(m: types.Message):
     p = m.text.split()
     if len(p) < 2: return
-    am = float(p)
+    am = float(p[1])
     if am < 500.0:
         return await m.answer("⚠️ Минимальная сумма вывода составляет **500₽**!")
     bal, _ = get_u(m.from_user.id)
@@ -208,8 +213,8 @@ async def cmd_mines_game(m: types.Message):
     uid = str(m.from_user.id)
     bal, _ = get_u(uid)
     p = m.text.split()
-    mc = int(p) if len(p) > 1 and p.isdigit() else 2
-    bet = float(p) if len(p) > 2 else 100.0
+    mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else 2
+    bet = float(p[2]) if len(p) > 2 else 100.0
     if mc < 2 or mc > 24 or bal < bet:
         return await m.answer("⚠️ Ошибка баланса или количества мин (от 2 до 24)!")
     cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
@@ -224,13 +229,9 @@ async def cmd_lesenka_game(m: types.Message):
     uid = str(m.from_user.id)
     bal, _ = get_u(uid)
     p = m.text.split()
-    mc = int(p) if len(p) > 1 and p.isdigit() else 1
-    bet = float(p) if len(p) > 2 else 100.0
+    mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else 1
+    bet = float(p[2]) if len(p) > 2 else 100.0
     if mc < 1 or mc > 4 or bal < bet:
         return await m.answer("⚠️ Ошибка баланса или количества мин на ряд (от 1 до 4)!")
     cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
     db.commit()
-    g_id = random.randint(100, 999)
-    mines = set()
-    for r in range(6):
-        for c in random.sample(range(5), mc): mines.add((r, c))

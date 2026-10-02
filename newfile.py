@@ -5,7 +5,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command, BaseFilter
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
-TOKEN = "8825080659:AAHKm6b3hiLTKBgZjwxeDslClxnFAu5J7OQ"  
+TOKEN = "8825080659:AAFes2YH252UQarUm4txhw5fKTicv-vENaY"  
 ADMIN_ID = 8034889148          
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)

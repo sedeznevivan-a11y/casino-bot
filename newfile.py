@@ -2,7 +2,6 @@ import asyncio
 import random
 import sqlite3
 import logging
-import time
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -12,7 +11,7 @@ bot = Bot(token="8825080659:AAFtgFVLApTstJQW512pPHjbu3CHRS7g8EM")
 dp = Dispatcher()
 games = {}
 
-# Железобетонная инициализация оригинальной базы данных
+# Инициализация оригинальной базы данных
 db = sqlite3.connect("casino_db.db", check_same_thread=False)
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, balance REAL DEFAULT 0.0, dep_sum REAL DEFAULT 0.0, win_sum REAL DEFAULT 0.0, is_mod INTEGER DEFAULT 0)")
@@ -232,4 +231,7 @@ async def cmd_cube(m: types.Message):
     if len(p) < 3: return
     cmd, bet = p[1].lower(), float(p[2])
     if bal < bet: return
+    
+    cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
+    db.commit()
     

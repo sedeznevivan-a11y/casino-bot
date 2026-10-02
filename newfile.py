@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token="8825080659:AAERBPHmb-fVyBJvP69bRbDepK5BlR2Vhhk")
+bot = Bot(token="8825080659:AAFcX2auYD9LqLv0c73y6_n4ZWAFwMzcgHg")
 dp = Dispatcher()
 games = {}
 

@@ -75,7 +75,7 @@ def get_lesenka_kb(g):
         kb.append([InlineKeyboardButton(text="💰 Забрать выигрыш", callback_data=f"lcash_{g['id']}")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
-# Перехватчик сообщений с твоим вшитым личным ID владельца!
+# Железобетонный обход любых текстовых блокировок хостинга!
 @dp.message()
 async def handle_all_messages(m: types.Message):
     uid = str(m.from_user.id)
@@ -217,7 +217,7 @@ async def handle_all_messages(m: types.Message):
     elif text.startswith("/lesenka"):
         bal, _ = get_u(uid)
         p = m.text.split()
-        mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else 1
+        mc = int(p[1]) if len(p) > 1 and p.isdigit() else 1
         bet = float(p[2]) if len(p) > 2 else 100.0
         if mc < 1 or mc > 4 or bal < bet:
             return await m.answer("⚠️ Ошибка баланса или количества мин на ряд (от 1 до 4)!")

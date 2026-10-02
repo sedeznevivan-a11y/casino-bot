@@ -94,7 +94,7 @@ async def cmd_admin(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
     cur.execute("SELECT COUNT(*), SUM(balance), SUM(dep_sum), SUM(win_sum) FROM users")
     res = cur.fetchone()
-    await m.answer(f"👑 **Админка**\n👤 Игроков: {res[0] if res else 0}\n💰 Банк: {round(res[1] or 0, 2)}₽\n📥 Депо: {round(res[2] or 0, 2)}₽\n📤 Выплаты: {round(res[3] or 0, 2)}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
+    await m.answer(f"👑 **Админка**\n👤 Игроков: {res[0] if res else 0}\n💰 Банк: {round(res[1] or 0, 2) if res and res[1] else 0}₽\n📥 Депо: {round(res[2] or 0, 2) if res and res[2] else 0}₽\n📤 Выплаты: {round(res[3] or 0, 2) if res and res[3] else 0}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
 
 @dp.message(Command("reord"))
 async def cmd_reord(m: types.Message):
@@ -203,36 +203,32 @@ async def cmd_withdraw(m: types.Message):
         await bot.send_message(8034889148, f"📥 **Заявка на вывод средств!**\n👤 Игрок: `{m.from_user.id}`\n💰 Сумма: **{am}₽**", reply_markup=kb)
         await m.answer("⚠️ **Заявка отправлена Администрации!** Ожидайте одобрения.")
 
-@dp.message(Command("mines", "lesenka"))
-async def cmd_setup_game(m: types.Message):
+# Разделенные, кристально чистые обработчики для Aiogram 3.x
+@dp.message(Command("mines"))
+async def cmd_mines_game(m: types.Message):
     uid = str(m.from_user.id)
     bal, _ = get_u(uid)
     p = m.text.split()
-    is_m = m.text.startswith("/mines")
-    mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else (2 if is_m else 1)
+    mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else 2
     bet = float(p[2]) if len(p) > 2 else 100.0
-    
-    if (is_m and (mc < 2 or mc > 24)) or (not is_m and (mc < 1 or mc > 4)) or bal < bet:
-        return await m.answer("⚠️ Ошибка баланса или параметров игры!")
-        
+    if mc < 2 or mc > 24 or bal < bet:
+        return await m.answer("⚠️ Ошибка баланса или количества мин (от 2 до 24)!")
     cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
     db.commit()
-    
     g_id = random.randint(100, 999)
-    if is_m:
-        mines = set(random.sample([(r, c) for r in range(5) for c in range(5)], mc))
-        games[uid] = {"id": g_id, "type": "mines", "m": mines, "o": set(), "bet": bet, "status": "play", "total_mines": mc}
-        await m.answer(f"💎 Ставка: {bet}₽", reply_markup=get_mines_kb(games[uid]))
-    else:
-        mines = set()
-        for r in range(6):
-            for c in random.sample(range(5), mc): mines.add((r, c))
-        games[uid] = {"id": g_id, "type": "lesenka", "m": mines, "o": set(), "bet": bet, "status": "play", "total_mines": mc, "cur_row": 0}
-        await m.answer(f"🧗‍♂️ Ставка: {bet}₽", reply_markup=get_lesenka_kb(games[uid]))
+    mines = set(random.sample([(r, c) for r in range(5) for c in range(5)], mc))
+    games[uid] = {"id": g_id, "type": "mines", "m": mines, "o": set(), "bet": bet, "status": "play", "total_mines": mc}
+    await m.answer(f"💎 Ставка: {bet}₽", reply_markup=get_mines_kb(games[uid]))
 
-@dp.message(Command("cube"))
-async def cmd_cube(m: types.Message):
+@dp.message(Command("lesenka"))
+async def cmd_lesenka_game(m: types.Message):
     uid = str(m.from_user.id)
     bal, _ = get_u(uid)
     p = m.text.split()
-    if len(p) < 3: return
+    mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else 1
+    bet = float(p[2]) if len(p) > 2 else 100.0
+    if mc < 1 or mc > 4 or bal < bet:
+        return await m.answer("⚠️ Ошибка баланса или количества мин на ряд (от 1 до 4)!")
+    cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
+    db.commit()
+    g_id = random.randint(100, 999)

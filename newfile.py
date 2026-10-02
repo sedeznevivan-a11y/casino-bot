@@ -35,8 +35,8 @@ def get_u(uid):
 def chk_rtp():
     cur.execute("SELECT value FROM config WHERE key = 'rtp_mode'")
     m = cur.fetchone()
-    if m and m[0] == "15": return random.randint(1, 100) <= 15
-    if m and m[0] != "auto": return random.randint(1, 100) <= int(m[0])
+    if m and m == "15": return random.randint(1, 100) <= 15
+    if m and m != "auto": return random.randint(1, 100) <= int(m)
     return random.randint(1, 100) <= 45
 
 def get_mines_kb(g):

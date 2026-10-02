@@ -5,9 +5,16 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token="8825080659:AAFtgFVLApTstJQW512pPHjbu3CHRS7g8EM")
+
+# Железобетонный запуск токена по правилам Aiogram 3.x
+bot = Bot(
+    token="8825080659:AAFtgFVLApTstJQW512pPHjbu3CHRS7g8EM",
+    default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+)
 dp = Dispatcher()
 games = {}
 
@@ -75,7 +82,7 @@ async def cmd_start(m: types.Message):
         [InlineKeyboardButton(text="👤 Профиль", callback_data="view_profile")],
         [InlineKeyboardButton(text="📥 Пополнить", callback_data="dep_menu"), InlineKeyboardButton(text="📤 Вывести", callback_data="wit_menu")]
     ])
-    await m.answer("🎮 **Double Cash Bot**\n💣 `/mines`, `/lesenka`, `/cube`, `/crash`\n💳 `/balance`, `/deposit`, `/withdraw`", parse_mode="Markdown", reply_markup=kb)
+    await m.answer("🎮 **Double Cash Bot**\n💣 `/mines`, `/lesenka`, `/cube`, `/crash`\n💳 `/balance`, `/deposit`, `/withdraw`", reply_markup=kb)
 
 @dp.message(Command("balance"))
 async def cmd_bal(m: types.Message):
@@ -87,7 +94,7 @@ async def cmd_admin(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
     cur.execute("SELECT COUNT(*), SUM(balance), SUM(dep_sum), SUM(win_sum) FROM users")
     res = cur.fetchone()
-    await m.answer(f"👑 **Админка**\n👤 Игроков: {res[0] or 0}\n💰 Банк: {round(res[1] or 0, 2)}₽\n📥 Депо: {round(res[2] or 0, 2)}₽\n📤 Выплаты: {round(res[3] or 0, 2)}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
+    await m.answer(f"👑 **Админка**\n👤 Игроков: {res[0] if res else 0}\n💰 Банк: {round(res[1] or 0, 2)}₽\n📥 Депо: {round(res[2] or 0, 2)}₽\n📤 Выплаты: {round(res[3] or 0, 2)}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
 
 @dp.message(Command("reord"))
 async def cmd_reord(m: types.Message):
@@ -164,7 +171,7 @@ async def cmd_spam(m: types.Message):
         if t:
             cur.execute("SELECT user_id FROM users")
             for row in cur.fetchall():
-                try: await bot.send_message(int(row[0]), t, parse_mode="Markdown")
+                try: await bot.send_message(int(row[0]), t)
                 except: pass
 
 @dp.message(Command("deposit"))
@@ -229,9 +236,3 @@ async def cmd_cube(m: types.Message):
     bal, _ = get_u(uid)
     p = m.text.split()
     if len(p) < 3: return
-    cmd, bet = p[1].lower(), float(p[2])
-    if bal < bet: return
-    
-    cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
-    db.commit()
-    

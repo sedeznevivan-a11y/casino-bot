@@ -1,7 +1,7 @@
 import asyncio, random, sqlite3, logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token="8825080659:AAFtgFVLApTstJQW512pPHjbu3CHRS7g8EM")
@@ -15,7 +15,7 @@ db.commit()
 
 @dp.message(Command("start"))
 async def cmd_start(m: types.Message):
-    await m.answer("🎮 **Double Cash Bot** на Aiogram!\n💣 `/mines`, `/crash` [ставка]\n💳 `/balance`", parse_mode="Markdown")
+    await m.answer("🎮 **Double Cash Bot** на Aiogram!\n💣 `/mines`, `/crash` [ставка]\n💳 `/balance` | `/admin`", parse_mode="Markdown")
 
 @dp.message(Command("balance"))
 async def cmd_bal(m: types.Message):

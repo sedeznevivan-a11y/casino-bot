@@ -95,10 +95,10 @@ async def cmd_admin(m: types.Message):
     cur.execute("SELECT COUNT(*), SUM(balance), SUM(dep_sum), SUM(win_sum) FROM users")
     res = cur.fetchone()
     # Железобетонное исправление кортежа базы данных!
-    игроков = res[0] if res and res[0] else 0
-    банк = res[1] if res and res[1] else 0
-    депо = res[2] if res and res[2] else 0
-    выплаты = res[3] if res and res[3] else 0
+    игроков = res[0] if res and res[0] is not None else 0
+    банк = res[1] if res and res[1] is not None else 0
+    депо = res[2] if res and res[2] is not None else 0
+    выплаты = res[3] if res and res[3] is not None else 0
     await m.answer(f"👑 **Админка**\n👤 Игроков: {игроков}\n💰 Банк: {round(банк, 2)}₽\n📥 Депо: {round(депо, 2)}₽\n📤 Выплаты: {round(выплаты, 2)}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
 
 @dp.message(Command("reord"))
@@ -208,6 +208,7 @@ async def cmd_withdraw(m: types.Message):
         await bot.send_message(8034889148, f"📥 **Заявка на вывод средств!**\n👤 Игрок: `{m.from_user.id}`\n💰 Сумма: **{am}₽**", reply_markup=kb)
         await m.answer("⚠️ **Заявка отправлена Администрации!** Ожидайте одобрения.")
 
+# Разделенные обработчики для Aiogram 3.x
 @dp.message(Command("mines"))
 async def cmd_mines_game(m: types.Message):
     uid = str(m.from_user.id)
@@ -233,5 +234,3 @@ async def cmd_lesenka_game(m: types.Message):
     bet = float(p[2]) if len(p) > 2 else 100.0
     if mc < 1 or mc > 4 or bal < bet:
         return await m.answer("⚠️ Ошибка баланса или количества мин на ряд (от 1 до 4)!")
-    cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
-    db.commit()

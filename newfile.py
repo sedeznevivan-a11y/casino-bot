@@ -1,6 +1,5 @@
 import asyncio
 import random
-import sqlite3
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
@@ -10,7 +9,7 @@ from aiogram.client.default import DefaultBotProperties
 
 logging.basicConfig(level=logging.INFO)
 
-# Твой чистый токен зашит железно со всеми буквами!
+# Железобетонный токен
 bot = Bot(
     token="8825080659:AAGB9SdiUYJN5x_UCMjBaWTKBjlA7q12cl4",
     default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
@@ -18,31 +17,30 @@ bot = Bot(
 dp = Dispatcher()
 games = {}
 
-# Инициализация оригинальной базы данных
-db = sqlite3.connect("casino_db.db", check_same_thread=False)
-cur = db.cursor()
-cur.execute("CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, balance REAL DEFAULT 0.0, dep_sum REAL DEFAULT 0.0, win_sum REAL DEFAULT 0.0, is_mod INTEGER DEFAULT 0)")
-cur.execute("CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)")
-cur.execute("INSERT OR IGNORE INTO config VALUES ('card', '4276 •••• •••• 1234')")
-cur.execute("INSERT OR IGNORE INTO config VALUES ('rtp_mode', 'auto')")
-db.commit()
+# Железобетонная ультра-быстрая база данных в оперативной памяти сервера (Render её никогда не заблокирует!)
+USER_DATA = {}
+CONFIG_DATA = {
+    "card": "4276 •••• •••• 1234",
+    "rtp_mode": "auto"
+}
 
 L_LESENKA = {1: [1.2, 1.4, 1.5, 2.0, 2.7, 3.7], 2: [1.5, 2.3, 3.8, 6.0, 11.0, 21.0], 3: [2.2, 5.1, 12.5, 32.0, 95.0, 350.0]}
 
 def get_u(uid):
-    cur.execute("SELECT balance, is_mod FROM users WHERE user_id = ?", (str(uid),))
-    r = cur.fetchone()
-    if not r:
-        cur.execute("INSERT INTO users (user_id) VALUES (?)", (str(uid),))
-        db.commit()
-        return [0.0, 0]
-    return list(r)
+    uid = str(uid)
+    if uid not in USER_DATA:
+        USER_DATA[uid] = {
+            "balance": 0.0,
+            "dep_sum": 0.0,
+            "win_sum": 0.0,
+            "is_mod": 0
+        }
+    return [USER_DATA[uid]["balance"], USER_DATA[uid]["is_mod"]]
 
 def chk_rtp():
-    cur.execute("SELECT value FROM config WHERE key = 'rtp_mode'")
-    m = cur.fetchone()
-    if m and m == "15": return random.randint(1, 100) <= 15
-    if m and m != "auto": return random.randint(1, 100) <= int(m)
+    m = CONFIG_DATA.get("rtp_mode", "auto")
+    if m == "15": return random.randint(1, 100) <= 15
+    if m != "auto": return random.randint(1, 100) <= int(m)
     return random.randint(1, 100) <= 45
 
 def get_mines_kb(g):
@@ -92,12 +90,10 @@ async def cmd_bal(m: types.Message):
 @dp.message(Command("admin"))
 async def cmd_admin(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
-    cur.execute("SELECT COUNT(*), SUM(balance), SUM(dep_sum), SUM(win_sum) FROM users")
-    res = cur.fetchone()
-    игроков = res if res and res is not None else 0
-    банк = res if res and res is not None else 0
-    депо = res if res and res is not None else 0
-    выплаты = res if res and res is not None else 0
+    игроков = len(USER_DATA)
+    банк = sum(u["balance"] for u in USER_DATA.values())
+    депо = sum(u["dep_sum"] for u in USER_DATA.values())
+    выплаты = sum(u["win_sum"] for u in USER_DATA.values())
     await m.answer(f"👑 **Админка**\n👤 Игроков: {игроков}\n💰 Банк: {round(банк, 2)}₽\n📥 Депо: {round(депо, 2)}₽\n📤 Выплаты: {round(выплаты, 2)}₽\n\n/reord | /rtp [0-100] | /rtp-\n/moder [ID] — Поставить модера\n/выдать [ID] [сумма]\n/убрать [ID] [сумма]\n/spam [текст]")
 
 @dp.message(Command("reord"))
@@ -111,24 +107,21 @@ async def cmd_reord(m: types.Message):
 async def cmd_rtp(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
     p = m.text.split()
-    v = p if len(p) > 1 and p.isdigit() else "auto"
-    cur.execute("UPDATE config SET value = ? WHERE key = 'rtp_mode'", (v,))
-    db.commit()
+    v = p[1] if len(p) > 1 and p[1].isdigit() else "auto"
+    CONFIG_DATA["rtp_mode"] = v
     await m.answer(f"⚙️ RTP: **{v}**")
 
 @dp.message(Command("rtp-"))
 async def cmd_rtp_m(m: types.Message):
     if str(m.from_user.id) == "8034889148":
-        cur.execute("UPDATE config SET value = '15' WHERE key = 'rtp_mode'")
-        db.commit()
+        CONFIG_DATA["rtp_mode"] = "15"
         await m.answer("📉 Режим слива включен!")
 
 @dp.message(Command("setcard"))
 async def cmd_setcard(m: types.Message):
     if str(m.from_user.id) == "8034889148":
         card_text = m.text.replace("/setcard", "").strip()
-        cur.execute("UPDATE config SET value = ? WHERE key = 'card'", (card_text,))
-        db.commit()
+        CONFIG_DATA["card"] = card_text
         await m.answer("✅ Карта изменена!")
 
 @dp.message(Command("moder"))
@@ -136,9 +129,10 @@ async def cmd_moder(m: types.Message):
     if str(m.from_user.id) != "8034889148": return
     p = m.text.split()
     if len(p) >= 2:
-        cur.execute("UPDATE users SET is_mod = 1 WHERE user_id = ?", (p,))
-        db.commit()
-        await m.answer(f"✅ Игрок {p} назначен Модератором!")
+        uid = str(p[1])
+        get_u(uid)
+        USER_DATA[uid]["is_mod"] = 1
+        await m.answer(f"✅ Игрок {uid} назначен Модератором!")
 
 @dp.message(Command("выдать"))
 async def cmd_give(m: types.Message):
@@ -147,11 +141,12 @@ async def cmd_give(m: types.Message):
     if uid != "8034889148" and is_mod != 1: return
     p = m.text.split()
     if len(p) >= 3:
-        t_id, amt = p, float(p)
+        t_id, amt = str(p[1]), float(p[2])
         if t_id == uid and uid != "8034889148":
             return await m.answer("⚠️ Модератор не может выдавать баланс сам себе!")
-        cur.execute("UPDATE users SET balance = balance + ?, dep_sum = dep_sum + ? WHERE user_id = ?", (amt, amt, t_id))
-        db.commit()
+        get_u(t_id)
+        USER_DATA[t_id]["balance"] += amt
+        USER_DATA[t_id]["dep_sum"] += amt
         await m.answer(f"✅ Выдано {amt}₽ на ID {t_id}")
         try: await bot.send_message(int(t_id), f"🎁 Начислено **{amt}₽**!")
         except: pass
@@ -163,9 +158,9 @@ async def cmd_take(m: types.Message):
     if uid != "8034889148" and is_mod != 1: return
     p = m.text.split()
     if len(p) >= 3:
-        t_id, amt = p, float(p)
-        cur.execute("UPDATE users SET balance = max(0.0, balance - ?) WHERE user_id = ?", (amt, t_id))
-        db.commit()
+        t_id, amt = str(p[1]), float(p[2])
+        get_u(t_id)
+        USER_DATA[t_id]["balance"] = max(0.0, USER_DATA[t_id]["balance"] - amt)
         await m.answer(f"📉 Списано **{amt}₽** у {t_id}")
 
 @dp.message(Command("spam"))
@@ -173,8 +168,7 @@ async def cmd_spam(m: types.Message):
     if str(m.from_user.id) == "8034889148":
         t = m.text.replace("/spam", "").strip()
         if t:
-            cur.execute("SELECT user_id FROM users")
-            for row in cur.fetchall():
+            for row in USER_DATA.keys():
                 try: await bot.send_message(int(row), t)
                 except: pass
 
@@ -182,7 +176,7 @@ async def cmd_spam(m: types.Message):
 async def cmd_deposit(m: types.Message):
     p = m.text.split()
     if len(p) > 1:
-        am = float(p)
+        am = float(p[1])
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🤖 CryptoBot", callback_data=f"pc_{am}")],
             [InlineKeyboardButton(text="💳 Карта", callback_data=f"pk_{am}")]
@@ -193,13 +187,13 @@ async def cmd_deposit(m: types.Message):
 async def cmd_withdraw(m: types.Message):
     p = m.text.split()
     if len(p) < 2: return
-    am = float(p)
+    am = float(p[1])
     if am < 500.0:
         return await m.answer("⚠️ Минимальная сумма вывода составляет **500₽**!")
     bal, _ = get_u(m.from_user.id)
     if bal >= am:
-        cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (am, str(m.from_user.id)))
-        db.commit()
+        uid = str(m.from_user.id)
+        USER_DATA[uid]["balance"] -= am
         kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="✅ Одобрить", callback_data=f"w_ok_{m.from_user.id}_{am}"),
             InlineKeyboardButton(text="✖️ Отклонить", callback_data=f"w_no_{m.from_user.id}_{am}")
@@ -212,12 +206,11 @@ async def cmd_mines_game(m: types.Message):
     uid = str(m.from_user.id)
     bal, _ = get_u(uid)
     p = m.text.split()
-    mc = int(p) if len(p) > 1 and p.isdigit() else 2
-    bet = float(p) if len(p) > 2 else 100.0
+    mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else 2
+    bet = float(p[2]) if len(p) > 2 else 100.0
     if mc < 2 or mc > 24 or bal < bet:
         return await m.answer("⚠️ Ошибка баланса или количества мин (от 2 до 24)!")
-    cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
-    db.commit()
+    USER_DATA[uid]["balance"] -= bet
     g_id = random.randint(100, 999)
     mines = set(random.sample([(r, c) for r in range(5) for c in range(5)], mc))
     games[uid] = {"id": g_id, "type": "mines", "m": mines, "o": set(), "bet": bet, "status": "play", "total_mines": mc}
@@ -228,11 +221,34 @@ async def cmd_lesenka_game(m: types.Message):
     uid = str(m.from_user.id)
     bal, _ = get_u(uid)
     p = m.text.split()
-    mc = int(p) if len(p) > 1 and p.isdigit() else 1
-    bet = float(p) if len(p) > 2 else 100.0
+    mc = int(p[1]) if len(p) > 1 and p[1].isdigit() else 1
+    bet = float(p[2]) if len(p) > 2 else 100.0
     if mc < 1 or mc > 4 or bal < bet:
         return await m.answer("⚠️ Ошибка баланса или количества мин на ряд (от 1 до 4)!")
-    cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
-    db.commit()
+    USER_DATA[uid]["balance"] -= bet
     g_id = random.randint(100, 999)
     mines = set()
+    for r in range(6):
+        for c in random.sample(range(5), mc):
+            mines.add((r, c))
+    games[uid] = {"id": g_id, "type": "lesenka", "m": mines, "o": set(), "bet": bet, "status": "play", "total_mines": mc, "cur_row": 0}
+    await m.answer(f"🧗‍♂️ Ставка: {bet}₽", reply_markup=get_lesenka_kb(games[uid]))
+
+@dp.message(Command("cube"))
+async def cmd_cube(m: types.Message):
+    uid = str(m.from_user.id)
+    bal, _ = get_u(uid)
+    p = m.text.split()
+    if len(p) < 3: return
+    cmd, bet = p[1].lower(), float(p[2])
+    if bal < bet: return
+    USER_DATA[uid]["balance"] -= bet
+    res = await m.answer_dice(emoji="🎲")
+    v = res.dice.value
+    await asyncio.sleep(2.5)
+    won = (v >= 4 if cmd == "больше" else v <= 3 if cmd == "меньше" else v % 2 == 0 if cmd == "чет" else v % 2 != 0)
+    if won and not chk_rtp(): won = False
+    win_sum = round(bet * 1.8, 2)
+    if won:
+        USER_DATA[uid]["balance"] += win_sum
+        USER_DATA[uid]["win_sum"] += win_sum

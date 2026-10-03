@@ -10,6 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 
 logging.basicConfig(level=logging.INFO)
 
+# Твой чистый токен зашит железно!
 bot = Bot(
     token="8825080659:AAGB9SdiUYJN5x_UCMjBaWTKBjlA7q12cl4",
     default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
@@ -17,6 +18,7 @@ bot = Bot(
 dp = Dispatcher()
 games = {}
 
+# Инициализация оригинальной базы данных
 db = sqlite3.connect("casino_db.db", check_same_thread=False)
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, balance REAL DEFAULT 0.0, dep_sum REAL DEFAULT 0.0, win_sum REAL DEFAULT 0.0, is_mod INTEGER DEFAULT 0)")
@@ -232,6 +234,3 @@ async def cmd_lesenka_game(m: types.Message):
         return await m.answer("⚠️ Ошибка баланса или количества мин на ряд (от 1 до 4)!")
     cur.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (bet, uid))
     db.commit()
-    g_id = random.randint(100, 999)
-    mines = set()
-    for r in range(6):
